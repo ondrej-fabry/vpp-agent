@@ -18,3 +18,13 @@ message StaticRoutes {
     }
     repeated Route route = 1;                /* list of IP static routes */
 }
+
+message ArpTable {
+    message ArpEntry {
+        string interface = 1;               /* interface name to which this ARP entry belongs to */
+        string ip_address = 2;              /* IP address */
+        string phys_address = 3;            /* MAC address matching to the IP */
+        bool is_static = 4;                 /* true for static ARP entries */
+    }
+    repeated ArpEntry arp_entry = 100;      /* List of ARP entries */
+}
