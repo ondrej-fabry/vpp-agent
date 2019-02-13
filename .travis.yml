@@ -37,11 +37,20 @@ before_install:
 script:
   - make yamllint
   - make check-links || true
-  - make lint
-  - make dep-check
-  - make verify-binapi
-  - make
-  - make test-cover
+#  - make lint
+#  - make dep-check
+#  - make verify-binapi
+#  - make
+#  - make test-cover
+
+jobs:
+  include:
+    - stage: verify
+      script: make verify-binapi
+    -
+      script: make dep-check
+    - stage: test
+      script: make lint test-cover
 
 after_success:
   - goveralls -coverprofile=/tmp/coverage.out -service=travis-ci
