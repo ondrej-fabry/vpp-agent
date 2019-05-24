@@ -7,7 +7,23 @@ option go_package = "github.com/ligato/vpp-agent/api/models/vpp/l3;vpp_l3";
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 option (gogoproto.messagename_all) = true;
 
+import "models/options.proto";
+
+
 message Route {
+    //option (key_prefix) = "vpp/l3/v2/route/";
+    //option (models.options).key = "vpp/l3/v2/route/";
+    //option (models.spec) = { module: "vpp.l3" version: "v2" type: "route" };
+    option (models.spec) = {
+        module: "vpp.l3"
+        version: "v2"
+        type: "route"
+    };
+   /* option (models.options).module = "vpp.l3";
+    option (models.options).version = "v2";
+    option (models.options).type = "route";*/
+
+
     enum RouteType {
         INTRA_VRF = 0;                  /* Forwarding is being done in the specified vrf_id only, or according to
                                            the specified outgoing interface. */

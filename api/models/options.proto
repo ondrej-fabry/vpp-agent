@@ -1,0 +1,20 @@
+syntax = "proto2";
+
+import "google/protobuf/descriptor.proto";
+
+package models;
+
+option go_package = "github.com/ligato/vpp-agent/api/models;models";
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+option (gogoproto.messagename_all) = true;
+
+message ModelSpec {
+    optional string module = 1;
+    optional string version = 2;
+    optional string type = 3;
+}
+
+extend google.protobuf.MessageOptions {
+    optional ModelSpec spec = 50222;
+}

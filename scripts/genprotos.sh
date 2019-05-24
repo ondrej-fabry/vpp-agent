@@ -14,6 +14,7 @@ for proto in $protos; do
 		--proto_path=. \
 		--proto_path=$GOPATH/src/github.com/ligato/vpp-agent/vendor \
 		--gogo_out=plugins=grpc,\
-Mgoogle/protobuf/any.proto=github.com/gogo/protobuf/types:$GOPATH/src \
+Mgoogle/protobuf/any.proto=github.com/gogo/protobuf/types,\
+Mgoogle/protobuf/descriptor.proto=github.com/gogo/protobuf/protoc-gen-gogo/descriptor:$GOPATH/src \
 		"${API_DIR}/$proto";
 done

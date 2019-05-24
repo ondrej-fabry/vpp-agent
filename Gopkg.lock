@@ -394,10 +394,12 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:823d6cdd461935cd426e76e4eec90c22938db664054eabda0bcf63ec0274566e"
+  digest = "1:8e5d261ea9b172191c939773365b5658e859b0e42932b360e0286f1d3733cba2"
   name = "github.com/golang/protobuf"
   packages = [
+    "descriptor",
     "proto",
+    "protoc-gen-go/descriptor",
     "ptypes",
     "ptypes/any",
     "ptypes/duration",
@@ -1000,8 +1002,10 @@
     "github.com/gogo/protobuf/jsonpb",
     "github.com/gogo/protobuf/proto",
     "github.com/gogo/protobuf/protoc-gen-gogo",
+    "github.com/gogo/protobuf/protoc-gen-gogo/descriptor",
     "github.com/gogo/protobuf/types",
     "github.com/gogo/status",
+    "github.com/golang/protobuf/descriptor",
     "github.com/ligato/cn-infra/agent",
     "github.com/ligato/cn-infra/config",
     "github.com/ligato/cn-infra/datasync",
