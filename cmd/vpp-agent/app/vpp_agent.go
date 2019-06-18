@@ -15,9 +15,11 @@
 package app
 
 import (
+	"time"
+
+	"github.com/fatih/color"
 	"github.com/ligato/cn-infra/datasync"
 	"github.com/ligato/cn-infra/datasync/kvdbsync"
-	"github.com/ligato/cn-infra/datasync/kvdbsync/local"
 	"github.com/ligato/cn-infra/datasync/msgsync"
 	"github.com/ligato/cn-infra/datasync/resync"
 	"github.com/ligato/cn-infra/db/keyval/consul"
@@ -25,8 +27,15 @@ import (
 	"github.com/ligato/cn-infra/db/keyval/redis"
 	"github.com/ligato/cn-infra/health/probe"
 	"github.com/ligato/cn-infra/health/statuscheck"
+	"github.com/ligato/cn-infra/logging"
 	"github.com/ligato/cn-infra/logging/logmanager"
 	"github.com/ligato/cn-infra/messaging/kafka"
+	"github.com/ligato/cn-infra/servicelabel"
+
+	vpp_interfaces "github.com/ligato/vpp-agent/api/models/vpp/interfaces"
+	vpp_punt "github.com/ligato/vpp-agent/api/models/vpp/punt"
+	"github.com/ligato/vpp-agent/clientv2/linux/localclient"
+	"github.com/ligato/vpp-agent/plugins/orchestrator/watcher"
 	"github.com/ligato/vpp-agent/plugins/vpp/srplugin"
 
 	"github.com/ligato/vpp-agent/plugins/configurator"
@@ -78,18 +87,6 @@ func New() *VPPAgent {
 	consulDataSync := kvdbsync.NewPlugin(kvdbsync.UseKV(&consul.DefaultPlugin))
 	redisDataSync := kvdbsync.NewPlugin(kvdbsync.UseKV(&redis.DefaultPlugin))
 
-	//etcdDataSyncGlobal := kvdbsync.NewPlugin(
-	//	kvdbsync.UseDeps(func(deps *kvdbsync.Deps) {
-	//		deps.SetName("global-sync")
-	//		deps.ServiceLabel = servicelabel.NewPlugin(func(plugin *servicelabel.Plugin) {
-	//			plugin.MicroserviceLabel = "global"
-	//			plugin.SetName("global-label")
-	//		},
-	//		)
-	//		deps.KvPlugin = &etcd.DefaultPlugin
-	//	}),
-	//)
-
 	writers := datasync.KVProtoWriters{
 		etcdDataSync,
 		consulDataSync,
@@ -105,16 +102,33 @@ func New() *VPPAgent {
 	)
 
 	// Set watcher for KVScheduler.
-	watchers := datasync.KVProtoWatchers{
-		local.DefaultRegistry,
-		//etcdDataSyncGlobal,
+	/*watchers := KVProtoWatchers{
+		etcdDataSyncGlobal,
 		etcdDataSync,
-		consulDataSync,
-		redisDataSync,
-	}
+		local.DefaultRegistry,
+		//consulDataSync,
+		//redisDataSync,
+	}*/
+
+	etcdDataSyncGlobal := kvdbsync.NewPlugin(
+		kvdbsync.UseDeps(func(deps *kvdbsync.Deps) {
+			deps.SetName("global-sync")
+			deps.ServiceLabel = servicelabel.NewPlugin(func(plugin *servicelabel.Plugin) {
+				plugin.MicroserviceLabel = "global"
+				plugin.SetName("global-label")
+			},
+			)
+			deps.KvPlugin = &etcd.DefaultPlugin
+		}),
+	)
+	watchers := watcher.NewPlugin(watcher.UseWatchers(
+		etcdDataSyncGlobal,
+		etcdDataSync,
+	))
+
 	orchestrator.DefaultPlugin.Watcher = watchers
 
-	ifplugin.DefaultPlugin.Watcher = watchers
+	ifplugin.DefaultPlugin.Watcher = etcdDataSync
 	ifplugin.DefaultPlugin.NotifyStates = ifStatePub
 	puntplugin.DefaultPlugin.PublishState = writers
 
@@ -156,8 +170,73 @@ func (VPPAgent) Init() error {
 
 // AfterInit executes resync.
 func (VPPAgent) AfterInit() error {
+	txn := localclient.DataResyncRequest("local")
+	txn.PuntException(&vpp_punt.Exception{
+		Reason:     "VXLAN-GBP-no-such-v4-tunnel",
+		SocketPath: "/run/local.sock",
+	})
+	if err := txn.Send().ReceiveReply(); err != nil {
+		logging.Debugf(color.RedString("resync for LOCALCLIENT FAILURE!!!!!: %v", err))
+		return err
+	} else {
+		logging.Debugf(color.MagentaString("resync for LOCALCLIENT SUCCESS!"))
+	}
+
 	// manually start resync after all plugins started
-	resync.DefaultPlugin.DoResync()
+	//resync.DefaultPlugin.DoResync()
+
+	go func() {
+		time.Sleep(time.Second * 5)
+		logging.Debug(color.HiMagentaString("TEST localclient CHANGE 1"))
+		txn := localclient.DataChangeRequest("local1").Put()
+		txn.VppInterface(&vpp_interfaces.Interface{
+			Name:        "localIface1",
+			Type:        vpp_interfaces.Interface_SOFTWARE_LOOPBACK,
+			IpAddresses: []string{"192.168.11.1/24"},
+		})
+		txn.VppInterface(&vpp_interfaces.Interface{
+			Name:        "localIface2",
+			Type:        vpp_interfaces.Interface_SOFTWARE_LOOPBACK,
+			IpAddresses: []string{"192.168.22.1/24"},
+		})
+		if err := txn.Send().ReceiveReply(); err != nil {
+			logging.Debugf(color.RedString("change for LOCALCLIENT FAILURE!!!!!: %v", err))
+		} else {
+			logging.Debugf(color.MagentaString("change for LOCALCLIENT SUCCESS!"))
+		}
+
+		time.Sleep(time.Second * 5)
+		logging.Debug(color.HiMagentaString("TEST full RESYNC 1"))
+		resync.DefaultPlugin.DoResync()
+
+		time.Sleep(time.Second * 5)
+		logging.Debug(color.HiMagentaString("TEST localclient CHANGE 2"))
+		txn2 := localclient.DataChangeRequest("local2")
+		txn2.Delete().VppInterface("localIface1")
+		if err := txn2.Send().ReceiveReply(); err != nil {
+			logging.Debugf(color.RedString("change for LOCALCLIENT FAILURE!!!!!: %v", err))
+		} else {
+			logging.Debugf(color.MagentaString("change for LOCALCLIENT SUCCESS!"))
+		}
+
+		time.Sleep(time.Second * 5)
+		logging.Debug(color.HiMagentaString("TEST full RESYNC 2"))
+		resync.DefaultPlugin.DoResync()
+
+		time.Sleep(time.Second * 5)
+		logging.Debug(color.HiMagentaString("TEST LOCAL RESYNC"))
+		txn3 := localclient.DataResyncRequest("lastLocal")
+		txn3.PuntException(&vpp_punt.Exception{
+			Reason:     "ipsec4-spi-o-udp-0",
+			SocketPath: "/run/local.sock",
+		})
+		if err := txn3.Send().ReceiveReply(); err != nil {
+			logging.Debugf(color.RedString("resync for LOCALCLIENT FAILURE!!!!!: %v", err))
+		} else {
+			logging.Debugf(color.MagentaString("resync for LOCALCLIENT SUCCESS!"))
+		}
+	}()
+
 	//orchestrator.DefaultPlugin.InitialSync()
 	return nil
 }
