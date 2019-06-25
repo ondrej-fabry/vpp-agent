@@ -202,44 +202,46 @@ func (p *IfPlugin) Init() error {
 
 		p.wg.Add(1)
 		go p.watchStatusEvents()
+	}
 
-		// start interface state updater
-		p.ifStateChan = make(chan *interfaces.InterfaceNotification, 1000)
+	// start interface state updater
+	p.ifStateChan = make(chan *interfaces.InterfaceNotification, 1000)
 
-		// start interface state publishing
-		p.wg.Add(1)
-		go p.publishIfStateEvents()
+	// start interface state publishing
+	p.wg.Add(1)
+	go p.publishIfStateEvents()
 
-		// Interface state updater
-		p.ifStateUpdater = &InterfaceStateUpdater{}
+	// Interface state updater
+	p.ifStateUpdater = &InterfaceStateUpdater{}
 
-		var n int
-		var t time.Time
-		ifNotifHandler := func(state *interfaces.InterfaceNotification) {
-			select {
-			case p.ifStateChan <- state:
-				// OK
-			default:
-				// full
-				if time.Since(t) > time.Second {
-					p.Log.Debugf("ifStateChan channel is full (%d)", n)
-					n = 0
-				} else {
-					n++
-				}
-				t = time.Now()
+	var n int
+	var t time.Time
+	ifNotifHandler := func(state *interfaces.InterfaceNotification) {
+		select {
+		case p.ifStateChan <- state:
+			// OK
+		default:
+			// full
+			if time.Since(t) > time.Second {
+				p.Log.Debugf("ifStateChan channel is full (%d)", n)
+				n = 0
+			} else {
+				n++
 			}
+			t = time.Now()
 		}
+	}
 
-		if err := p.ifStateUpdater.Init(p.ctx, p.Log, p.KVScheduler, p.GoVppmux, p.intfIndex, ifNotifHandler); err != nil {
-			return err
-		}
+	err = p.ifStateUpdater.Init(p.ctx, p.Log, p.KVScheduler, p.GoVppmux, p.intfIndex,
+		ifNotifHandler, p.publishStats)
+	if err != nil {
+		return err
+	}
 
+	if p.publishStats {
 		if err = p.subscribeWatcher(); err != nil {
 			return err
 		}
-
-		p.Log.Debug("ifStateUpdater Initialized")
 	}
 
 	return nil
@@ -261,11 +263,9 @@ func (p *IfPlugin) subscribeWatcher() (err error) {
 
 // AfterInit delegates the call to ifStateUpdater.
 func (p *IfPlugin) AfterInit() error {
-	if p.publishStats {
-		err := p.ifStateUpdater.AfterInit()
-		if err != nil {
-			return err
-		}
+	err := p.ifStateUpdater.AfterInit()
+	if err != nil {
+		return err
 	}
 
 	if p.StatusCheck != nil {
