@@ -19,9 +19,10 @@ import (
 	"runtime/trace"
 	"sort"
 	"strings"
+	"time"
 
+	"github.com/fatih/color"
 	"github.com/gogo/protobuf/proto"
-
 	"github.com/ligato/cn-infra/logging"
 
 	kvs "github.com/ligato/vpp-agent/plugins/kvscheduler/api"
@@ -894,18 +895,20 @@ func (s *Scheduler) markFailedValue(node graph.NodeRW, args *applyValueArgs, err
 		}
 	}
 	s.updateNodeState(node, newState, args)
+
 	node.SetFlags(&ErrorFlag{err: err, retriable: retriableErr})
 	return newState
 }
 
 func (s *Scheduler) logNodeVisit(operation string, args *applyValueArgs) func() {
-	msg := fmt.Sprintf("%s (key = %s)", operation, args.kv.key)
+	msg := fmt.Sprintf("%s (key: %s)", operation, color.YellowString(args.kv.key))
 	args.depth++
 	indent := strings.Repeat(" ", args.depth*2)
 	fmt.Printf("%s%s %s\n", indent, nodeVisitBeginMark, msg)
+	t := time.Now()
 	return func() {
 		args.depth--
-		fmt.Printf("%s%s %s\n", indent, nodeVisitEndMark, msg)
+		fmt.Printf("%s%s %s (%v)\n", indent, nodeVisitEndMark, msg, time.Since(t).Round(time.Millisecond).Seconds())
 	}
 }
 

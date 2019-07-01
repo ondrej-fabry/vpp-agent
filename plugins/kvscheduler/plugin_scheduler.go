@@ -46,7 +46,7 @@ const (
 	txnHistoryTrimmingPeriod = 1 * time.Minute
 
 	// by default, a history of processed transaction is recorded
-	defaultRecordTransactionHistory = true
+	defaultRecordTransactionHistory = false
 
 	// by default, only transaction processed in the last 24 hours are kept recorded
 	// (with the exception of permanently recorded init period)

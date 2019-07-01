@@ -27,6 +27,7 @@ type Config struct {
 func defaultConfig() *Config {
 	return &Config{
 		PollingInterval: defaultUpdatePeriod,
+		Disabled:        true,
 	}
 }
 

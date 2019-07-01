@@ -261,7 +261,7 @@ func (mem *memNamedMapping) putNameToIdxSync(name string, metadata interface{}) 
 
 func (mem *memNamedMapping) publishAddToChannel(name string, value interface{}) {
 	mem.subscribers.Range(func(key, val interface{}) bool {
-		subscriber := key.(string)
+		//subscriber := key.(string)
 		clb := val.(func(idxmap.NamedMappingGenericEvent))
 
 		if clb != nil {
@@ -274,7 +274,7 @@ func (mem *memNamedMapping) publishAddToChannel(name string, value interface{}) 
 				},
 				Value: value,
 			}
-			mem.Debug("publish add to ", subscriber, dto)
+			//mem.Debug("publish add to ", subscriber, dto)
 			clb(dto)
 		}
 

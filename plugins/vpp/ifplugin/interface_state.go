@@ -347,8 +347,8 @@ func (c *InterfaceStateUpdater) processIfStateEvent(notif *vppcalls.InterfaceEve
 	if !found {
 		return
 	}
-	c.log.Debugf("Interface state notification for %s (idx: %d): %+v",
-		ifState.Name, ifState.IfIndex, notif)
+	/*c.log.Debugf("Interface state notification for %s (idx: %d): %+v",
+	ifState.Name, ifState.IfIndex, notif)*/
 
 	// store data in ETCD
 	c.publishIfState(&intf.InterfaceNotification{
