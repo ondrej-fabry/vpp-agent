@@ -1,7 +1,12 @@
 #!/bin/bash
 set -euo pipefail
 
-echo "preparing E2E test"
+if [ ! -n "${VPP_IMG-}" ]; then
+	echo "VPP image must be defined with VPP_IMG variable!"
+	exit 1
+fi
+
+echo "preparing E2E test.."
 set -x
 
 args=($*)
@@ -17,9 +22,12 @@ else
 	elif [ "$(ls -A ${COVER_DIR}/e2e-coverage)" ]; then
 		rm -f ${COVER_DIR}/e2e-coverage/*
 	fi
-	go test -covermode=count -coverpkg="github.com/ligato/vpp-agent/..." -c ./cmd/vpp-agent -o ./tests/e2e/vpp-agent.test -tags teste2e
-	DOCKER_ARGS="${DOCKER_ARGS-} -v ${COVER_DIR}/e2e-coverage:${COVER_DIR}/e2e-coverage"
-	args+=("-cov=${COVER_DIR}/e2e-coverage")
+	go test -c ./cmd/vpp-agent -tags test-e2e \
+		-covermode=count \
+		-coverpkg="github.com/ligato/vpp-agent/..." \
+		-o ./tests/e2e/vpp-agent.test
+	DOCKER_ARGS="${DOCKER_ARGS-} -v ${COVER_DIR}/e2e-coverage:/e2e-coverage"
+	args+=("-cov=/e2e-coverage")
 fi
 
 # compile e2e test suite

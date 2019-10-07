@@ -1,4 +1,4 @@
-// +build teste2e
+// +build test-e2e
 
 package main
 
