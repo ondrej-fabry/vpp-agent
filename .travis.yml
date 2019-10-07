@@ -32,8 +32,8 @@ stages:
 jobs:
   include:
     - stage: Check
-      language: shell
       name: "Check formatting"
+      language: shell
       addons:
         apt:
           packages:
@@ -78,18 +78,14 @@ jobs:
       env: VPP_VERSION=1904
       script:
         - make e2e-tests-cover
-      after_success:
-        - bash <(curl -s https://codecov.io/bash) -f /tmp/e2e-cov.out -F e2e1904
     - env: VPP_VERSION=1908
       script:
         - make e2e-tests-cover
       after_success:
-        - bash <(curl -s https://codecov.io/bash) -f /tmp/e2e-cov.out -F e2e1908
+        - bash <(curl -s https://codecov.io/bash) -f /tmp/e2e-cov.out -F e2e
     - env: VPP_VERSION=2001
       script:
         - make e2e-tests-cover
-      after_success:
-        - bash <(curl -s https://codecov.io/bash) -f /tmp/e2e-cov.out -F e2e2001
 
 notifications:
   slack:
