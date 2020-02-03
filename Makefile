@@ -48,6 +48,12 @@ ifeq ($(NOSTRIP),)
 LDFLAGS += -w -s
 endif
 
+GO_BUILD_ARGS ?=
+
+ifeq ($(NOTRIM),)
+GO_BUILD_ARGS += -trimpath
+endif
+
 ifeq ($(BUILDPIE),y)
 GO_BUILD_ARGS += -buildmode=pie
 LDFLAGS += -extldflags=-Wl,-z,now,-z,relro
