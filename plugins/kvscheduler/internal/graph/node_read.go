@@ -106,7 +106,12 @@ func (node *nodeR) GetTargets(relation string) (runtimeTargets RuntimeTargets) {
 		}
 		var nodes []Node
 		for _, key := range node.targets[i].MatchingKeys.Iterate() {
-			nodes = append(nodes, node.graph.nodes[key])
+			n := node.graph.nodes[key]
+			if n == nil {
+				logging.Warn("node is nil for key: " + key + ", relation: " + relation)
+				continue
+			}
+			nodes = append(nodes, n)
 		}
 		runtimeTargets = append(runtimeTargets, RuntimeTarget{
 			Label: node.targets[i].Label,
